@@ -1,0 +1,1 @@
+export { getMessageFromError } from './getMessageFromError';

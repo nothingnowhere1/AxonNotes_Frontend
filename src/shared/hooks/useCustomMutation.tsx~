@@ -1,0 +1,43 @@
+import { useMutation, type UseMutationOptions, useQueryClient } from '@tanstack/react-query';
+import { getMessageFromError } from '@/shared/utils/getMessageFromError';
+
+type QueryFn<TData> = ((data: TData) => string[]) | readonly string[];
+
+
+type Options<TData, TVariables> = UseMutationOptions<
+	TData,
+	Error,
+	TVariables
+> & {
+	queryKey: QueryFn<TData>;
+};
+
+export const useCustomMutation = <TData, TVariables>(
+	options: Options<TData, TVariables>
+) => {
+	const { queryKey, onSuccess, ...rest } = options;
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		...rest,
+		onSuccess: async (data, variables, context) => {
+			onSuccess?.(data, variables, context);
+			if (typeof queryKey === 'function') {
+				await queryClient.invalidateQueries({
+					queryKey: queryKey(data)
+				});
+			} else {
+				await queryClient.invalidateQueries({
+					queryKey: options.queryKey
+				});
+			}
+
+			return data;
+		},
+		onError: (error) => {
+			const message = getMessageFromError(error);
+			console.error(message);
+			alert(message);
+		}
+	});
+};
